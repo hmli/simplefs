@@ -12,3 +12,8 @@
 * main. `Main` 函数
 * utils. 其它功能
 
+## 参考
+
+* [whalefs](https://github.com/030io/whalefs)
+* [seaweedfs](https://github.com/chrislusf/seaweedfs)
+
