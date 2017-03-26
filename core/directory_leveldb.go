@@ -35,7 +35,7 @@ func (d *LeveldbDirectory) Set(n *Needle) (err error) {
 	if err != nil {
 		return err
 	}
-	return d.db.Put(data[:8], data, nil) // TODO 确保 data[:8] 是 id
+	return d.db.Put(data[:8], data, nil)
 }
 
 func (d *LeveldbDirectory) Has(id uint64) (has bool) {

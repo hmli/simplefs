@@ -92,7 +92,6 @@ func NeedleUnmarshal(b []byte) (n *Needle, err error) {
 	return
 }
 
-// TODO unmarshal -> file
 
 // HeaderSize Needle 中除了正文外的额外信息的大小
 func HeaderSize(extsize uint64) (size uint64) {
