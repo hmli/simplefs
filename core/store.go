@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"io/ioutil"
+	"simplefs/utils"
 )
 
 const (
@@ -80,6 +82,24 @@ func (v *Volume) GetNeedle(id uint64) (n *Needle, err error) {
 	return
 }
 
+func (v *Volume) GetFile(id uint64) (data []byte, ext string, err error) {
+	needle, err := v.GetNeedle(id)
+	if err != nil {
+		return data, ext, fmt.Errorf("Get needle ", err)
+	}
+	ext = needle.FileExt
+	data, err = ioutil.ReadAll(needle)
+	if err != nil {
+		return nil, "", err
+	}
+	checksum := utils.Checksum(data)
+	if checksum != needle.Checksum {
+		return nil, "", ErrWrongCheckSum
+	}
+	return
+}
+
+
 func (v *Volume) DelNeedle(id uint64) (err error) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -99,7 +119,8 @@ func (v *Volume) DelNeedle(id uint64) (err error) {
 }
 
 // NewNeedle allocate a new needle.
-func (v *Volume) NewNeedle(id uint64, size uint64, filename string) (n *Needle, err error) {
+func (v *Volume) NewNeedle(id uint64, data []byte, filename string) (n *Needle, err error) {
+	size := uint64(len(data))
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	// 1. alloc space
@@ -108,14 +129,14 @@ func (v *Volume) NewNeedle(id uint64, size uint64, filename string) (n *Needle, 
 	ext := Ext(filename)
 	offset, err := v.allocSpace(size, uint64(len(ext)))
 	if err != nil {
-		return nil, fmt.Errorf("err1", err)
+		return nil, err
 	}
 	n = new(Needle)
 	n.ID = id
 	n.Size = size
 	n.Offset = offset
 	n.Flag = 0
-	n.Checksum = 0 // TODO checksum
+	n.Checksum = utils.Checksum(data)
 	now := time.Now()
 	n.CreatedAt = now
 	n.UpdatedAt = now
@@ -126,6 +147,21 @@ func (v *Volume) NewNeedle(id uint64, size uint64, filename string) (n *Needle, 
 		err = fmt.Errorf("Leveldb: ", err)
 	}
 	return n, err
+}
+
+func (v *Volume) NewFile(data []byte, filename string) (id uint64, err error) {
+	id = utils.UniqueId()
+	//needle, err := v.NewNeedle(id, uint64(len(data)), filename)
+	needle, err := v.NewNeedle(id, data, filename)
+
+	if err != nil {
+		return id, fmt.Errorf("New needle : ", err)
+	}
+	_, err = needle.Write(data)
+	if err != nil {
+		return
+	}
+	return id, err
 }
 
 func (v *Volume) currentOffset() (offset uint64, err error) {

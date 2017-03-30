@@ -8,4 +8,5 @@ var (
 	ErrLeakSpace   = errors.New("Volume leak of space")
 	ErrDeleted     = errors.New("Needle is deleted")
 	ErrSmallNeedle = errors.New("Needle's size less than data size")
+	ErrWrongCheckSum = errors.New("Checksum err")
 )

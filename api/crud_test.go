@@ -23,14 +23,15 @@ func TestServer_FileHandler(t *testing.T) {
 	}
 	data, err := ioutil.ReadAll(file)
 	assert.NoError(t, err)
-	id, err := s.newFile(data, "testfile") //TODO bug here
+	id, err := s.Volume.NewFile(data, "testfile") //TODO bug here
 	assert.NoError(t, err)
 	needle, err := s.Volume.GetNeedle(id)
 	assert.NoError(t, err)
 	t.Logf("%+v", needle)
 	t.Log(needle.File.Name())
 	t.Log(needle.Size)
-	data, ext, err := s.getFile(id)
+	assert.Equal(t, needle.Size, uint64(len(data)))
+	data, ext, err := s.Volume.GetFile(id)
 	t.Log(data, ext, err)
 
 }

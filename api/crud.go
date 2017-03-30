@@ -41,7 +41,7 @@ func (s *Server) Run() {
 
 func (s *Server) newFile(data []byte, filename string) (id uint64, err error) {
 	id = utils.UniqueId()
-	needle, err := s.Volume.NewNeedle(id, uint64(len(data)), filename)
+	needle, err := s.Volume.NewNeedle(id, data, filename)
 
 	if err != nil {
 		return id, fmt.Errorf("New needle : ", err)
