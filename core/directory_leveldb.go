@@ -4,17 +4,21 @@ import (
 	"encoding/binary"
 	"github.com/syndtr/goleveldb/leveldb"
 	"path/filepath"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"fmt"
 )
 
 type LeveldbDirectory struct {
 	db   *leveldb.DB
 	path string // leveldb 文件存放路径
+	iter iterator.Iterator
 }
 
 func NewLeveldbDirectory(dir string) (d *LeveldbDirectory, err error) {
 	d = new(LeveldbDirectory)
 	d.path = filepath.Join(dir, "index") // TODO all volumes in one directory. Future: one volume one directory
 	d.db, err = leveldb.OpenFile(d.path, nil)
+	d.iter = d.db.NewIterator(nil,nil)
 	return
 }
 
@@ -49,4 +53,18 @@ func (d *LeveldbDirectory) Del(id uint64) (err error) {
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, id)
 	return d.db.Delete(key, nil)
+}
+
+func (d *LeveldbDirectory) Next() (id uint64, hasNext bool) {
+	hasNext = d.iter.Next()
+	if hasNext {
+		key := d.iter.Key()
+		id = binary.BigEndian.Uint64(key)
+		value := d.iter.Value()
+		fmt.Println(string(value))
+		return id, true
+	} else {
+		return 0, false
+	}
+
 }

@@ -14,7 +14,7 @@ func TestNewVolume(t *testing.T) {
 func TestVolume_NewNeedle(t *testing.T) {
 	v, err := NewVolume(1, "")
 	assert.NoError(t, err)
-	n, err := v.NewNeedle(1, 50, "test.jpg")
+	n, err := v.NewNeedle(1, []byte("20"), "test.jpg")
 	assert.NoError(t, err)
 	t.Logf("%+v", n)
 }

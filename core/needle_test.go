@@ -9,7 +9,7 @@ import (
 func TestNeedleMarshal(t *testing.T) {
 	v, err := NewVolume(1, "")
 	assert.NoError(t, err)
-	n, err := v.NewNeedle(1, 20, "test.jpg")
+	n, err := v.NewNeedle(1, []byte("20"), "test.jpg")
 	assert.NoError(t, err)
 	//var id uint64 = 3
 	//now := time.Now()
@@ -32,7 +32,7 @@ func TestNeedleMarshal(t *testing.T) {
 func TestNeedle_ReadWrite(t *testing.T) {
 	v, err := NewVolume(1, "")
 	assert.NoError(t, err)
-	n, err := v.NewNeedle(1, 20, "twrite.jpg")
+	n, err := v.NewNeedle(1, []byte("20"), "twrite.jpg")
 	assert.NoError(t, err)
 
 	data := []byte("dddbbeifls3fff")
@@ -51,7 +51,7 @@ func TestNeedle_MultiReadWrite(t *testing.T) {
 	v, err := NewVolume(1, "")
 	assert.NoError(t, err)
 	for i := 0; i < 10; i++ {
-		n, err := v.NewNeedle(uint64(i), 20, "d.jpg")
+		n, err := v.NewNeedle(uint64(i), []byte("20"), "d.jpg")
 		assert.NoError(t, err)
 		var data []byte = make([]byte, 4)
 		binary.BigEndian.PutUint32(data, uint32(i*i))

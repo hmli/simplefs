@@ -25,8 +25,12 @@ func TestLeveldbDirectory_leveldb(t *testing.T) {
 func TestLeveldbDirectory(t *testing.T) {
 	d, err := NewLeveldbDirectory("/tmp/lvldir")
 	assert.NoError(t, err)
+	iter := d.db.NewIterator(nil, nil)
+	for iter.Next() {
+		d.db.Delete(iter.Key(), nil)
+	}
 	now := time.Now()
-	var id uint64 = 1
+	var id uint64 = 3
 	n := &Needle{
 		ID:        id,
 		Size:      20,
@@ -42,9 +46,14 @@ func TestLeveldbDirectory(t *testing.T) {
 	assert.Equal(t, n.ID, newN.ID)
 	exists := d.Has(id)
 	assert.True(t, exists)
+	id, has := d.Next()
+	t.Log(id, has)
+	assert.True(t, has)
+	id2, has2 := d.Next()
+	t.Log(id2, has2)
+	assert.False(t, has2)
 	err = d.Del(id)
 	assert.NoError(t, err)
 	newExists := d.Has(id)
 	assert.False(t, newExists)
-
 }

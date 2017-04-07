@@ -197,6 +197,10 @@ func (v *Volume) RemainingSpace() (size uint64) {
 	return v.Size - v.CurrentOffset
 }
 
+func (v *Volume) Fragment() (err error) {
+	return
+}
+
 // 从完整文件名中获取扩展名
 func Ext(filename string) (ext string) {
 	index := strings.LastIndex(filename, ".")
