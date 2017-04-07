@@ -5,8 +5,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"simplefs/core"
-	"simplefs/utils"
+	"github.com/hmli/simplefs/core"
+	"github.com/hmli/simplefs/utils"
 	"strconv"
 )
 

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 	"io/ioutil"
-	"simplefs/utils"
+	"github.com/hmli/simplefs/utils"
 )
 
 const (
