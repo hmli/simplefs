@@ -71,3 +71,18 @@ func TestNeedle_MultiReadWrite(t *testing.T) {
 		assert.Equal(t, origin, uint32(i*i))
 	}
 }
+
+
+func TestVolume_DelNeedle(t *testing.T) {
+	v, err := NewVolume(1, "/tmp/fs")
+	assert.NoError(t, err)
+	id,  err := v.NewFile([]byte("aaa"), "1")
+	assert.NoError(t, err)
+	t.Log("New:", id)
+	assert.True(t, v.Directory.Has(id))
+	v.Print()
+	v.DelNeedle(id)
+	v.Print()
+	assert.False(t, v.Directory.Has(id))
+
+}

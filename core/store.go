@@ -75,9 +75,6 @@ func (v *Volume) GetNeedle(id uint64) (n *Needle, err error) {
 	if err != nil {
 		return
 	}
-	if n.IsDeleted() {
-		return nil, ErrDeleted
-	}
 	n.File = v.File
 	return
 }
@@ -103,17 +100,8 @@ func (v *Volume) GetFile(id uint64) (data []byte, ext string, err error) {
 func (v *Volume) DelNeedle(id uint64) (err error) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	// 1. Get & check exists
-	// 2. Free space
-	// 3. Del key in directory
-	n, err := v.GetNeedle(id)
-	if err != nil {
-		return
-	}
-	if !n.IsDeleted() {
-		n.UpdatedAt = time.Now()
-		n.Flag = 1
-		v.Directory.Del(id)
+	if v.Directory.Has(id) {
+		return v.Directory.Del(id)
 	}
 	return
 }
@@ -135,7 +123,6 @@ func (v *Volume) NewNeedle(id uint64, data []byte, filename string) (n *Needle, 
 	n.ID = id
 	n.Size = size
 	n.Offset = offset
-	n.Flag = 0
 	n.Checksum = utils.Checksum(data)
 	now := time.Now()
 	n.CreatedAt = now
@@ -180,8 +167,8 @@ func (v *Volume) allocSpace(filesize uint64, extsize uint64) (offset uint64, err
 	if remainingSize < totalSize {
 		return v.CurrentOffset, ErrLeakSpace
 	}
-	offset = v.CurrentOffset + HeaderSize(extsize)
-	v.setCurrentIndex(offset + filesize)
+	offset = v.CurrentOffset
+	v.setCurrentIndex( v.CurrentOffset + HeaderSize(extsize) + filesize)
 	return
 }
 
@@ -198,7 +185,77 @@ func (v *Volume) RemainingSpace() (size uint64) {
 }
 
 func (v *Volume) Fragment() (err error) {
-	return
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	var index uint64
+	var id uint64
+	var key []byte
+	var shouldDelete bool
+	var exists bool = true
+	var loopErr error
+	iter := v.Directory.Iter()
+	for exists {
+		key, exists = iter.Next()
+		if !exists {
+			continue
+		}
+		id = binary.BigEndian.Uint64(key)
+		needle, err := v.GetNeedle(id)
+		if err != nil {
+			if err == ErrDeleted {
+				shouldDelete = true
+			} else {
+				loopErr = err
+				continue
+			}
+		}
+		//if needle.IsDeleted() {
+		//	shouldDelete = true
+		//}
+		if shouldDelete {
+			if index == 0 { // 初始化需要覆盖的位置
+				index = needle.Offset
+			}
+			// 如果有连续的已删除的文件, 就不处理, 因为需要覆盖的位置不用变.
+		} else {
+			// 未删除的文件, 覆盖掉上一个需要覆盖的位置
+			//oldOffset := needle.Offset
+			needle.Offset = index
+			var currentData []byte = make([]byte, needle.Size)
+			currentData, loopErr = NeedleMarshal(needle)
+			if  loopErr != nil {
+				loopErr = err
+				continue
+			}
+			_, loopErr = v.File.WriteAt(currentData, int64(index))
+			if loopErr != nil {
+				continue
+			}
+			index += needle.Size
+		}
+	}
+	v.setCurrentIndex(index)
+	return loopErr
+}
+
+func (v *Volume) Print() {
+	iter := v.Directory.Iter()
+	var hasNext bool = true
+	for hasNext {
+		var key []byte
+		key, hasNext = iter.Next()
+		if hasNext {
+			id := binary.BigEndian.Uint64(key)
+			n, err := v.GetNeedle(id)
+			if err != nil && err != ErrDeleted {
+				fmt.Println("Err: ", err)
+			}
+			fmt.Printf("id: %d, offset: %d, t \n", id, n.Offset)
+		} else {
+			fmt.Println("-------- Finish-------")
+		}
+	}
+	iter.Release()
 }
 
 // 从完整文件名中获取扩展名

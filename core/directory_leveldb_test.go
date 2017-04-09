@@ -6,6 +6,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"testing"
 	"time"
+	"os"
+	"encoding/binary"
 )
 
 func TestLeveldbDirectory_leveldb(t *testing.T) {
@@ -23,10 +25,12 @@ func TestLeveldbDirectory_leveldb(t *testing.T) {
 }
 
 func TestLeveldbDirectory(t *testing.T) {
+	os.RemoveAll("/tmp/lvldir")
 	d, err := NewLeveldbDirectory("/tmp/lvldir")
 	assert.NoError(t, err)
 	iter := d.db.NewIterator(nil, nil)
 	for iter.Next() {
+		t.Log("DELETE:", iter.Key())
 		d.db.Delete(iter.Key(), nil)
 	}
 	now := time.Now()
@@ -46,14 +50,29 @@ func TestLeveldbDirectory(t *testing.T) {
 	assert.Equal(t, n.ID, newN.ID)
 	exists := d.Has(id)
 	assert.True(t, exists)
-	id, has := d.Next()
-	t.Log(id, has)
-	assert.True(t, has)
-	id2, has2 := d.Next()
-	t.Log(id2, has2)
-	assert.False(t, has2)
+	t.Log(exists)
 	err = d.Del(id)
 	assert.NoError(t, err)
 	newExists := d.Has(id)
 	assert.False(t, newExists)
+}
+
+func TestLeveldbDirectory_Iter(t *testing.T) {
+	v, err  := NewVolume(1, "/tmp/iter")
+	assert.NoError(t, err)
+	id, err := v.NewFile([]byte("dde"), "dde1")
+	assert.NoError(t, err)
+	t.Log(id)
+	iter := v.Directory.Iter()
+	var key []byte = make([]byte, 8)
+	var exists bool = true
+	for exists {
+		key, exists = iter.Next()
+		t.Log(id, exists)
+		if exists {
+			id := binary.BigEndian.Uint64(key)
+			t.Log(id)
+		}
+	}
+	iter.Release()
 }

@@ -29,3 +29,13 @@ func TestExt(t *testing.T) {
 	f4 := "ddd.fff.ggg.hhh"
 	t.Log(Ext(f4))
 }
+
+func TestVolume_Fragment(t *testing.T) {
+	v, err := NewVolume(1, "/tmp/fs")
+	assert.NoError(t, err)
+	v.Print()
+	v.DelNeedle(1491730516)
+	v.Print()
+	v.Fragment()
+	v.Print()
+}

@@ -5,5 +5,10 @@ type Directory interface {
 	Set(n *Needle) (err error)
 	Has(id uint64) (has bool)
 	Del(id uint64) (err error)
-	Next() (id uint64, hasNext bool)
+	Iter() (iter Iterator)
+}
+
+type Iterator interface {
+	Next() (key []byte, exists bool)
+	Release()
 }
