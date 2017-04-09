@@ -21,11 +21,14 @@ const (
 	DefaultDir    string = "/tmp/fs"
 )
 
+// TODO !垃圾回收打算这样实现: 另建一个文件, 专门用来存被删除的id, 回收时读这个文件来回收. 最后清空此文件.
+
 // TODO Compression
 // TODO Several volumes make up a Store
 type Volume struct {
 	ID            uint64
 	File          *os.File
+	FileDel *os.File
 	Directory     Directory
 	Size          uint64
 	Path          string
@@ -39,9 +42,14 @@ func NewVolume(id uint64, dir string) (v *Volume, err error) {
 	}
 	// TODO check dir exists. Create one if not exists
 	path := filepath.Join(dir, strconv.FormatUint(id, 10)+".data")
+	pathDel := filepath.Join(dir, strconv.FormatUint(id, 10)+".del")
 	v = new(Volume)
 	v.ID = id
 	v.File, err = os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("Open file: ", err)
+	}
+	v.FileDel, err = os.OpenFile(pathDel, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("Open file: ", err)
 	}
@@ -101,7 +109,14 @@ func (v *Volume) DelNeedle(id uint64) (err error) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	if v.Directory.Has(id) {
-		return v.Directory.Del(id)
+		err = v.Directory.Del(id)
+		if err != nil {
+			return err
+		}
+		var b []byte = make([]byte, 8)
+		binary.BigEndian.PutUint64(b, id)
+		_, err = v.FileDel.Write(b)
+		return err
 	}
 	return
 }
