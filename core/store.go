@@ -40,7 +40,7 @@ func NewVolume(id uint64, dir string) (v *Volume, err error) {
 	if dir == "" {
 		dir = DefaultDir
 	}
-	// TODO check dir exists. Create one if not exists
+	pathMustExists(dir)
 	path := filepath.Join(dir, strconv.FormatUint(id, 10)+".data")
 	pathDel := filepath.Join(dir, strconv.FormatUint(id, 10)+".del")
 	v = new(Volume)
@@ -108,17 +108,18 @@ func (v *Volume) GetFile(id uint64) (data []byte, ext string, err error) {
 func (v *Volume) DelNeedle(id uint64) (err error) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	if v.Directory.Has(id) {
-		err = v.Directory.Del(id)
-		if err != nil {
-			return err
-		}
-		var b []byte = make([]byte, 8)
-		binary.BigEndian.PutUint64(b, id)
-		_, err = v.FileDel.Write(b)
+	n, err := v.GetNeedle(id)
+	if err != nil && err != ErrDeleted{
 		return err
 	}
-	return
+	var b []byte = make([]byte, 16)
+	binary.BigEndian.PutUint64(b[:8], n.Offset)
+	binary.BigEndian.PutUint64(b[8:], n.Size)
+	_, err = v.FileDel.Write(b)
+	if err != nil {
+		return err
+	}
+	return v.Directory.Del(id)
 }
 
 // NewNeedle allocate a new needle.
@@ -202,55 +203,26 @@ func (v *Volume) RemainingSpace() (size uint64) {
 func (v *Volume) Fragment() (err error) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	var index uint64
-	var id uint64
-	var key []byte
-	var shouldDelete bool
-	var exists bool = true
-	var loopErr error
-	iter := v.Directory.Iter()
-	for exists {
-		key, exists = iter.Next()
-		if !exists {
-			continue
+	var b []byte = make([]byte, 16)
+	for {
+		n, err := v.FileDel.Read(b)
+		if err != nil && err != io.EOF {
+			return err
 		}
-		id = binary.BigEndian.Uint64(key)
-		needle, err := v.GetNeedle(id)
-		if err != nil {
-			if err == ErrDeleted {
-				shouldDelete = true
-			} else {
-				loopErr = err
-				continue
-			}
+		if n == 0 {
+			break
 		}
-		//if needle.IsDeleted() {
-		//	shouldDelete = true
-		//}
-		if shouldDelete {
-			if index == 0 { // 初始化需要覆盖的位置
-				index = needle.Offset
-			}
-			// 如果有连续的已删除的文件, 就不处理, 因为需要覆盖的位置不用变.
-		} else {
-			// 未删除的文件, 覆盖掉上一个需要覆盖的位置
-			//oldOffset := needle.Offset
-			needle.Offset = index
-			var currentData []byte = make([]byte, needle.Size)
-			currentData, loopErr = NeedleMarshal(needle)
-			if  loopErr != nil {
-				loopErr = err
-				continue
-			}
-			_, loopErr = v.File.WriteAt(currentData, int64(index))
-			if loopErr != nil {
-				continue
-			}
-			index += needle.Size
-		}
+		offset := binary.BigEndian.Uint64(b[:8])
+		size := binary.BigEndian.Uint64(b[8:])
+		err = v.recycleSpace(offset, size)
 	}
-	v.setCurrentIndex(index)
-	return loopErr
+	return
+}
+
+// recycleSpace 回收指定位置的空间
+func (v *Volume) recycleSpace(offset uint64, size uint64) (err error) {
+	
+	return
 }
 
 func (v *Volume) Print() {
@@ -281,3 +253,22 @@ func Ext(filename string) (ext string) {
 	}
 	return strings.TrimSpace(filename[index+1:])
 }
+
+func pathExist(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func pathMustExists(path string) {
+	exists := pathExist(path)
+	if !exists {
+		err := os.MkdirAll(path, 0666)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
