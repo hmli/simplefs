@@ -221,7 +221,7 @@ func (v *Volume) Fragment() (err error) {
 
 // recycleSpace 回收指定位置的空间
 func (v *Volume) recycleSpace(offset uint64, size uint64) (err error) {
-	
+
 	return
 }
 
