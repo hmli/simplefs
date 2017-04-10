@@ -1,7 +1,7 @@
 
 # Simplefs
 
-按照 Facebook Haystack 论文用 Golang 实现的文件存储系统, 仅作学习用.
+按照 Facebook Haystack 论文用 Golang 实现的文件存储系统, 仅作学习用. 生产环境请使用下面 `参考` 中推荐的项目.
 
 > 论文原文: [facebook haystack](http://www.usenix.org/event/osdi10/tech/full_papers/Beaver.pdf)
 
@@ -11,6 +11,10 @@
 * core. 对 Haystack 中 `needle`, `directory`, `store` 的实现
 * main. `Main` 函数
 * utils. 其它功能
+
+## 与原文的出入
+
+TODO
 
 ## 参考
 
