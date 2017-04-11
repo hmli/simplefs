@@ -234,7 +234,7 @@ func (v *Volume) Print() {
 		if hasNext {
 			id := binary.BigEndian.Uint64(key)
 			n, err := v.GetNeedle(id)
-			if err != nil && err != ErrDeleted {
+			if err != nil && err != ErrDeleted  {
 				fmt.Println("Err: ", err)
 			}
 			fmt.Printf("id: %d, offset: %d, t \n", id, n.Offset)
