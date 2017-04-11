@@ -32,10 +32,33 @@ func TestExt(t *testing.T) {
 
 func TestVolume_Fragment(t *testing.T) {
 	v, err := NewVolume(1, "/tmp/fs")
+	id, err := v.NewFile([]byte("fff"), "f0")
 	assert.NoError(t, err)
 	v.Print()
-	v.DelNeedle(1491730516)
+	t.Log(id)
+	v.DelNeedle(id)
 	v.Print()
-	v.Fragment()
+	fl, _ := v.File.Stat()
+	sizeOld := fl.Size()
+	err = v.Fragment()
+	if err != nil {
+		t.Log(err)
+	}
+	assert.NoError(t, err)
 	v.Print()
+	//has := v.Directory.Has(id)
+	//assert.True(t, has)
+	fl, _ = v.File.Stat()
+	sizeNew := fl.Size()
+	t.Log(sizeOld, sizeNew)
+}
+
+func TestVolume_PrintFile(t *testing.T) {
+	v, err := NewVolume(1, "/tmp/fs")
+	assert.NoError(t, err)
+	//v.NewNeedle(1, []byte("20"), "test.jpg")
+	v.PrintFile()
+	header, err := v.ReadHeader(8)
+	assert.NoError(t, err)
+	t.Log(header, len(header))
 }

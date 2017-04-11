@@ -36,7 +36,7 @@ func (d *LeveldbDirectory) Get(id uint64) (n *Needle, err error) {
 	return
 }
 
-func (d *LeveldbDirectory) Set(n *Needle) (err error) {
+func (d *LeveldbDirectory) New(n *Needle) (err error) {
 	data, err := NeedleMarshal(n)
 	if err != nil {
 		return err
@@ -51,10 +51,21 @@ func (d *LeveldbDirectory) Has(id uint64) (has bool) {
 	return err == nil
 }
 
+func (d *LeveldbDirectory) Set(id uint64, needle *Needle) (err error) {
+	oldNeedle, err := d.Get(id)
+	if err != nil {
+		 return
+	}
+	err = d.Del(id)
+	if err != nil {
+		return d.New(oldNeedle)
+	}
+	return d.New(needle)
+}
+
 func (d *LeveldbDirectory) Del(id uint64) (err error) {
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, id)
-
 	return d.db.Delete(key, nil)
 }
 

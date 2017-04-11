@@ -42,12 +42,18 @@ func TestLeveldbDirectory(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	err = d.Set(n)
+	err = d.New(n)
 	assert.NoError(t, err)
 	newN, err := d.Get(id)
 	assert.NoError(t, err)
 	t.Log(newN)
 	assert.Equal(t, n.ID, newN.ID)
+	n.Offset = 70
+	d.Set(id, n)
+	setedN, err := d.Get(id)
+	assert.NoError(t, err)
+	t.Log(setedN)
+	assert.Equal(t, int(setedN.Offset), 70)
 	exists := d.Has(id)
 	assert.True(t, exists)
 	t.Log(exists)
