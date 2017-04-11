@@ -284,55 +284,6 @@ func (v *Volume) Print() {
 	iter.Release()
 }
 
-// Truncate 删除已经被软删除的了的文件， 压缩空间
-func (v *Volume) Truncate() (err error) {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-	//newFilePath := v.File.Name() + ".temp"
-	//newFile, err := os.OpenFile(newFilePath, os.O_CREATE|os.O_RDWR, 0666)
-	//if err != nil {
-	//	return  fmt.Errorf("Open file: ", err)
-	//}
-	var currentOffset int64 = int64(InitIndexSize)
-	var newOffset int64 = int64(InitIndexSize) // 下次移动文件时， 应移动到这里
-	for {
-		header, errIn := v.ReadHeader(currentOffset)
-		if errIn != nil {
-			err = errIn
-			break
-		}
-		n, errIn := NeedleUnmarshal(header[:NeedleFixSize])
-		if errIn != nil {
-			err = errIn
-			break
-		}
-		has := v.Directory.Has(n.ID)
-		fullSize :=  int64(len(header)) + int64(n.Size)
-		if has { // 文件存在，检查它前面是否有空间。 如果有， 就移动过去。
-			if currentOffset > newOffset {
-				// 将文件移动到 newOffset 处。
-				tempBytes := make([]byte, fullSize)
-				_, errIn := v.File.ReadAt(tempBytes, currentOffset)
-				if errIn != nil {
-					err = errIn
-					break
-				}
-				_, errIn = v.File.WriteAt(tempBytes, newOffset)
-				if errIn != nil {
-					err = errIn
-					break
-				}
-			}
-			newOffset += int64(n.Size) // 这个文件未删除， 将删除游标移到他后面。
-		}
-		currentOffset += fullSize
-	}
-
-
-
-	return
-}
-
 func (v *Volume) CheckCurrentIndex() (same bool) {
 	i1 := v.CurrentOffset
 	b := make([]byte, InitIndexSize)
