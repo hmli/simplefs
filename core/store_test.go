@@ -57,7 +57,6 @@ func TestVolume_PrintFile(t *testing.T) {
 	v, err := NewVolume(1, "/tmp/fs")
 	assert.NoError(t, err)
 	//v.NewNeedle(1, []byte("20"), "test.jpg")
-	v.PrintFile()
 	header, err := v.ReadHeader(8)
 	assert.NoError(t, err)
 	t.Log(header, len(header))
