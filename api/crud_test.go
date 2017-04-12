@@ -16,7 +16,7 @@ func TestNewServer(t *testing.T) {
 func TestServer_FileHandler(t *testing.T) {
 	s := NewServer(22333, "/tmp/fs")
 	//f := "/Users/blacksheep/work/src/simplefs/test.jpg"
-	f := "/Users/li/work/src/simplefs/test.jpg"
+	f := "../test.jpg"
 	file, err := os.OpenFile(f, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Error(err)

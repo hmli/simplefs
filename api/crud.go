@@ -39,37 +39,11 @@ func (s *Server) Run() {
 	}
 }
 
-func (s *Server) newFile(data []byte, filename string) (id uint64, err error) {
-	id = utils.UniqueId()
-	needle, err := s.Volume.NewNeedle(id, data, filename)
-
-	if err != nil {
-		return id, fmt.Errorf("New needle : ", err)
-	}
-	_, err = needle.Write(data)
-	if err != nil {
-		return
-	}
-	return id, err
-}
-
-func (s *Server) getFile(id uint64) (data []byte, ext string, err error) {
-	needle, err := s.Volume.GetNeedle(id)
-	fmt.Printf("Got file: %+v %s\n", needle, err)
-	if err != nil {
-		return data, ext, fmt.Errorf("Get needle ", err)
-	}
-	ext = needle.FileExt
-	data, err = ioutil.ReadAll(needle)
-	fmt.Println("Get file data: ", data, err)
-	return
-}
-
 func (s *Server) FileHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	fmt.Println(r.Method)
 	switch r.Method {
-	case "GET": // TODO E-Tag, Content-Type, Content-Length
+	case "GET": // TODO cache with E-Tag
 		r.ParseForm()
 		id := r.Form.Get("id")
 		idInt, err := strconv.Atoi(id)
@@ -77,17 +51,14 @@ func (s *Server) FileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "Wrong format id: ", id)
 			return
 		}
-		data, ext, err := s.getFile(uint64(idInt))
+		data, ext, err := s.Volume.GetFile(uint64(idInt))
 		if err != nil {
 			fmt.Fprint(w, "No file")
 			return
 		}
 		fmt.Println("Ext: ", ext, "lendata: ", len(data))
 		w.Header().Set("Content-Type", ContentType(ext))
-		_, err = fmt.Fprint(w, string(data))
-		if err != nil {
-			fmt.Println(err)
-		}
+		fmt.Fprint(w, string(data))
 		return
 	case "POST":
 		r.ParseMultipartForm(32 << 20)
@@ -107,7 +78,7 @@ func (s *Server) FileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "File content err")
 			return
 		}
-		id, err := s.newFile(data, filename)
+		id, err := s.Volume.NewFile(data, filename)
 		if err != nil {
 			fmt.Fprint(w, "File storing err")
 			return
@@ -116,6 +87,16 @@ func (s *Server) FileHandler(w http.ResponseWriter, r *http.Request) {
 	case "DELETE":
 		r.ParseForm()
 		id := r.Form.Get("id")
+		idInt, err := strconv.Atoi(id)
+		if err != nil {
+			fmt.Fprint(w, "Wrong format id: ", id)
+			return
+		}
+		err = s.Volume.DelNeedle(uint64(idInt))
+		if err != nil {
+			fmt.Fprint(w, err)
+			return
+		}
 		fmt.Fprint(w, id)
 	default:
 		fmt.Fprint(w, "Invalid method")

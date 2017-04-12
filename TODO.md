@@ -6,3 +6,4 @@
 * 实现单机多 `Volume`
 * 挂到自己的其他项目中实测
 * 使用 Raft 实现多机多`Volume`
+* `Directory.Next()` 设计得不好， 但是, who cares...
