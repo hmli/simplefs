@@ -21,7 +21,6 @@ const (
 	DefaultDir    string = "/tmp/fs"
 )
 
-// TODO !垃圾回收打算这样实现: 另建一个文件, 将还存在的needle转移过去， 再替换掉原文件
 
 // TODO Compression
 // TODO Several volumes make up a Store
@@ -204,7 +203,7 @@ func (v *Volume) Fragment() (err error) {
 	for exists {
 		key, exists = iter.Next()
 		if !exists {
-			continue
+			break
 		}
 		id := binary.BigEndian.Uint64(key)
 		needle, err := v.GetNeedle(id) // 读取一个needle
@@ -213,7 +212,7 @@ func (v *Volume) Fragment() (err error) {
 			continue
 		}
 		offset := int64(needle.Offset)
-		size := int64(NeedleFixSize) + int64(needle.Size) + int64(HeaderSize(uint64(len(needle.FileExt))))
+		size := int64(needle.Size) + int64(HeaderSize(uint64(len(needle.FileExt))))
 		var needleData []byte = make([]byte, size)
 		v.File.ReadAt(needleData, offset)
 		_, err = newFile.WriteAt(needleData, currentOffset) // 修改 offset， 并写到新文件中
@@ -231,14 +230,10 @@ func (v *Volume) Fragment() (err error) {
 	binary.BigEndian.PutUint64(currentOffsetByte, uint64(currentOffset))
 	newFile.WriteAt(currentOffsetByte, 0)
 	v.setCurrentIndex(uint64(currentOffset))
-	filename := v.File.Name()
-	//fullpath := filepath.Join(v.Path, filename)
-	fullpath:=filename
+	fullpath:= v.File.Name()
 	// 给老文件改名
-	delName  := filename + ".del"
-	delpath := delName
-	//delpath := filepath.Join(v.Path, delName)
-	fmt.Println("Old change name: ", filename, delName)
+	delpath := fullpath + ".del"
+	fmt.Println("Old change name: ", fullpath, delpath)
 	delFile , err := os.OpenFile(delpath, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return
@@ -277,6 +272,10 @@ func (v *Volume) Print() {
 				fmt.Println("Err: ", err)
 			}
 			fmt.Printf("id: %d, offset: %d \n", id, n.Offset)
+			var b []byte = make([]byte, n.Size)
+			dataOffset := n.Offset + HeaderSize(uint64(len(n.FileExt)))
+			v.File.ReadAt(b, int64(dataOffset))
+			fmt.Println("data: ", n.FileExt, string(b))
 		} else {
 			fmt.Println("-------- Finish-------")
 		}
@@ -310,7 +309,8 @@ func (v *Volume) ReadHeader(offset int64) (header []byte, err error) {
 // 从完整文件名中获取扩展名
 func Ext(filename string) (ext string) {
 	index := strings.LastIndex(filename, ".")
-	if index == len(filename)-1 {
+	fmt.Println(index)
+	if index == -1 {
 		return ""
 	}
 	return strings.TrimSpace(filename[index+1:])
